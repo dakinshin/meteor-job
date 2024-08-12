@@ -23,15 +23,30 @@ const methodCall = function(root, method, params, cb, after) {
   const apply = (left = (Job._ddp_apply != null ? Job._ddp_apply[root.root != null ? root.root : root] : undefined)) != null ? left : Job._ddp_apply;
   if (typeof apply !== 'function') {
      throw new Error("Job remote method call error, no valid invocation method found.");
-   }
+  }
+  const apply2 = (name, param, cb) => {
+    return apply(name, param, cb ? (err, res) => {
+      if (!err) {
+        if (res instanceof Promise) {
+          res.then((result) => {
+            cb(err, result)
+          })
+        } else {
+          return cb(err, res)
+        }
+      } else {
+        return cb(err)
+      }
+    } : undefined)
+  }
   const name = `${root.root != null ? root.root : root}_${method}`;
   if (cb && (typeof cb === 'function')) {
-    return apply(name, params, (err, res) => {
+    return apply2(name, params, (err, res) => {
       if (err) { return cb(err); }
       return cb(null, after(res));
     });
   } else {
-    return after(apply(name, params));
+    return after(apply2(name, params));
   }
 };
 
@@ -553,7 +568,7 @@ class Job {
           // Not the DDP npm package
           if ((ddp === null) && ((typeof Meteor !== 'undefined' && Meteor !== null ? Meteor.apply : undefined) != null)) {
             // Meteor local server/client
-            result.push(this._setDDPApply(Meteor.apply, collName));
+            result.push(this._setDDPApply(Meteor.applyAsync, collName));
           } else {
             // No other possibilities...
             throw new Error("Bad ddp object in Job.setDDP()");
