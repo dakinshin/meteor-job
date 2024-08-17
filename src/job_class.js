@@ -847,7 +847,6 @@ class Job {
 
     } else if ((doc.type != null) && (doc.data != null)) { // This case is used to create local Job objects from DDP calls
       this._doc = doc;
-
     } else {  // This is the normal "create a new object" case
       const time = new Date();
       this._doc = {
@@ -1146,10 +1145,14 @@ class Job {
       cb = args[adjustedLength - 1];
     [options, cb] = optionsHelp(options, cb);
     if (options.getLog == null) { options.getLog = false; }
-    if (this._doc._id != null) {
+    if (this._doc._id != undefined) {
       return methodCall(this._root, "getJob", [this._doc._id, options], cb, doc => {
         if (doc != null) {
-          this._doc = doc;
+          if (doc instanceof Promise) {
+            doc.then((doc) => this._doc = doc)
+          } else {
+            this._doc = doc;
+          }
           return this;
         } else {
           return false;
